@@ -1,0 +1,37 @@
+FROM flink:1.17.2-scala_2.12-java11
+
+USER root
+
+RUN apt-get update && \
+  apt-get install -y --no-install-recommends \
+  python3 python3-pip python3-dev build-essential \
+  openjdk-11-jdk-headless && \
+  ln -sf /usr/bin/python3 /usr/bin/python && \
+  mkdir -p /opt/java/openjdk && \
+  ln -s /usr/lib/jvm/java-11-openjdk*/include /opt/java/openjdk/include && \
+  rm -rf /var/lib/apt/lists/*
+
+RUN pip3 install --no-cache-dir --upgrade pip && \
+  pip3 install --no-cache-dir \
+  apache-flink \
+  kafka-python \
+  nltk \
+  emoji \
+  scikit-learn==1.6.1 \
+  elasticsearch==8.17.0
+
+ENV PYFLINK_PYTHON=/usr/bin/python3 \
+  NLTK_DATA=/usr/local/share/nltk_data
+
+# Only copy Kafka JARs and the fat Elasticsearch JAR
+COPY flink-connector-kafka-1.17.2.jar /opt/flink/lib/
+COPY kafka-clients-3.2.3.jar /opt/flink/lib/
+COPY flink-sql-connector-elasticsearch7-3.0.1-1.17.jar /opt/flink/lib/
+
+COPY jobs   /project/jobs/
+COPY models /project/models/
+
+RUN chown -R flink:flink /project
+
+USER flink
+WORKDIR /project
